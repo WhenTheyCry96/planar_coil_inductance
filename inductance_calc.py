@@ -30,8 +30,13 @@ class Planarcoil():
         self.mu = 4 * math.pi * 1.0e-7 * 1.0e-4
         # number of conductor = how many pieces of straight conductors
         self.num_coil = 0
+        self.cond_arr_XPdir = []
+        self.cond_arr_XMdir = []
+        self.cond_arr_YMdir = []
+        self.cond_arr_YPdir = []
         self.get_input()
         self.generate_shape()
+
 
     def get_input(self):
         print('\n\n' + "="*40)
@@ -100,10 +105,6 @@ class Planarcoil():
                 print('\n' + "!!!!Input Error!!!!")
 
     def generate_shape(self):
-        cond_arr_Xpdir = []
-        cond_arr_Xmdir = []
-        cond_arr_Ypdir = []
-        cond_arr_Ymdir = []
         for n in range(self.turn):
             # Straight Cond I flows in x+ direction
             if n == 0 or n == 1:
@@ -121,24 +122,97 @@ class Planarcoil():
             l_yp = self.outer_d - (2*n+2)*self.wire_width - (2*n+1)*self.wire_distance
             cond_temp_yp = StraightCoil(w=self.wire_width, h=self.height ,l=l_yp)
             
-            cond_arr_Xpdir.append(cond_temp_xp)
-            cond_arr_Xmdir.append(cond_temp_xm)
-            cond_arr_Ypdir.append(cond_temp_ym)
-            cond_arr_Ymdir.append(cond_temp_yp)
+            self.cond_arr_XPdir.append(cond_temp_xp)
+            self.cond_arr_XMdir.append(cond_temp_xm)
+            self.cond_arr_YMdir.append(cond_temp_ym)
+            self.cond_arr_YPdir.append(cond_temp_yp)
+        #FIXME
+        #Add the last turn of the rest conductor
 
-    def mutual_inductance(self, cond1, cond2):
-        
-        pass 
+    def mutual_L(self, l_wire, d):
+        # l_wire for length and d for distance btw the track centers
+        # GMD for Geometric Mean Distance
+        GMD = d/math.exp(1/12*math.pow(d/self.wire_width,2))
+        Q = math.log((l_wire/GMD) + math.pow((1+(math.pow(l_wire/GMD,2))),0.5)) - \
+            math.pow((1+(math.pow(GMD/l_wire,2))),0.5) + GMD/l_wire
+        result = 2*l_wire*Q
+        return result
+
+    def self_inductance_total(self):
+        result = 0
+        for i in self.cond_arr_XPdir:
+            result = result + i.L_self
+        for i in self.cond_arr_XMdir:
+            result = result + i.L_self
+        for i in self.cond_arr_YPdir:
+            result = result + i.L_self
+        for i in self.cond_arr_YMdir:
+            result = result + i.L_self
+        print("\n"+"="*40)
+        print("Total Self Inductance : %f" %(result))
+        print("="*40 +"\n")
+        return result
+
+    def mutual_inductance_totalP(self, arr_cond):
+        mutual_totL = 0
+        for i in range(len(arr_cond) - 1):
+            for j in range(i+1, len(arr_cond)):
+                # mutual inductance between conductors
+                len_p = arr_cond[j].l + 2*(self.wire_width+self.wire_distance)
+                len_m = 2*(j-i)*(self.wire_width+self.wire_distance)
+                dist_btw = self.wire_width + (j-i)*self.wire_distance
+                mutual_temp = (self.mutual_L(l_wire=len_p,d=dist_btw)-self.mutual_L(l_wire=len_m,d=dist_btw))
+                mutual_totL = mutual_totL + mutual_temp
+                print("Mutual Temp[%d, %d] : %f" %(i,j, mutual_temp))
+        print("\n"+"="*40)
+        print("Total Plus Mutual Inductance : %f" %(mutual_totL))
+        print("="*40 +"\n")
+        return mutual_totL
+
+    def mutual_inductance_totalM(self, arr_cond1, arr_cond2):
+        mutual_totL = 0
+        for i in range(len(arr_cond1)):
+            for j in range(len(arr_cond2)):
+                # mutual inductance between opposite I dir. conductors
+                long_l = arr_cond1[i].l
+                short_l = arr_cond2[j].l
+                if arr_cond1[i].l < arr_cond2[j].l:
+                    long_l = arr_cond2[j].l
+                    short_l = arr_cond1[i].l
+                len_l = abs(i-j)*(self.wire_width+self.wire_distance)+self.wire_width
+                len_r = abs(abs(i-j)-1)*(self.wire_width+self.wire_distance)+self.wire_distance
+                dist_btw = self.outer_d - (i+j-2)*(self.wire_width+self.wire_distance)-self.wire_width
+                mutual_temp = 0.5*(self.mutual_L(l_wire=(len_l+short_l),d=dist_btw)
+                    +self.mutual_L(l_wire=(len_r+short_l),d=dist_btw)
+                    -self.mutual_L(l_wire=len_l,d=dist_btw)
+                    -self.mutual_L(l_wire=len_r,d=dist_btw))
+                mutual_totL = mutual_totL + mutual_temp
+                print("Mutual Temp[%d, %d] : %f" %(i,j, mutual_temp))
+        print("\n"+"="*40)
+        print("Total Minus Mutual Inductance : %f" %(mutual_totL))
+        print("="*40 +"\n")
+        return mutual_totL
 
     def calc_inductance(self):
         print('\n\n' + "="*20)
         print("Inducatnce calculation")
         print("="*20 + '\n\n')
+        L_tot = 0
+        L_tot = L_tot + self.self_inductance_total()
+        L_tot = L_tot + self.mutual_inductance_totalP(self.cond_arr_XPdir)
+        L_tot = L_tot + self.mutual_inductance_totalP(self.cond_arr_XMdir)
+        L_tot = L_tot + self.mutual_inductance_totalP(self.cond_arr_YPdir)
+        L_tot = L_tot + self.mutual_inductance_totalP(self.cond_arr_YMdir)
+        L_tot = L_tot + self.mutual_inductance_totalM(self.cond_arr_XPdir, self.cond_arr_XMdir)
+        L_tot = L_tot + self.mutual_inductance_totalM(self.cond_arr_YPdir, self.cond_arr_YMdir)
+        return L_tot
 
 
 if __name__ == "__main__":
     # Execute only if run as a script
     ex_planar = Planarcoil()
+    #print(ex_planar.self_inductance_total())
+    print(ex_planar.calc_inductance())
     #cond1 = StraightCoil(1,2,3,4)
     #cond2 = StraightCoil(5,6,7,8)
     #ex_planar.mutual_inductance(cond1, cond2)
