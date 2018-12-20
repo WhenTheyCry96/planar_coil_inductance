@@ -3,17 +3,23 @@ import math
 
 
 class StraightCoil():
-    def __init__(self, a, b, h, l):
-        self.a = a
-        self.b = b
+    def __init__(self, w, h, l):
+        self.w = w
         self.h = h
-        self.l = l
-        self.L_self = 0
-    
-    def self_inducatnce(self, length):
+        if l > 0:
+            self.l = l
+        else:
+            print("\n\tERROR ERROR ERROR ERROR\n Invalid Straight Coil Length : %f \n\n" %(l))
+            raise ValueError
+        self.L_self = self.self_inducatnce()
+        # print("cond w : %f cond h : %f cond l : %f cond L : %f" %(self.w,self.h,self.l,self.L_self))
+
+    def self_inducatnce(self):
         # self inductance of straight rectangular conductors
         # for thin-high freq.
-        L_self = 0.002*self.l*( math.log(2*self.l/(self.a+self.b)) + 0.25049 +(self.a+self.b)/(3*self.l) )
+        # L_self [uH]
+        L_self = 0.002*self.l*( math.log(2*self.l/(self.h+self.w)) + 
+            0.50049 +(self.h+self.w)/(3*self.l) )
         return L_self 
 
 
@@ -25,6 +31,7 @@ class Planarcoil():
         # number of conductor = how many pieces of straight conductors
         self.num_coil = 0
         self.get_input()
+        self.generate_shape()
 
     def get_input(self):
         print('\n\n' + "="*40)
@@ -42,7 +49,7 @@ class Planarcoil():
                 print('\n' + "!!!!Input Error!!!!" + '\n')
 
         while True:
-            wire_width = input('\n'+"Input Wire Width : ")
+            wire_width = input('\n'+"Input Wire Width [cm]: ")
             if float(wire_width) > 0:
                 self.wire_width = float(wire_width)
                 break
@@ -50,7 +57,15 @@ class Planarcoil():
                 print('\n' + "!!!!Input Error!!!!" + '\n')
 
         while True:
-            wire_distance = input('\n'+"Input Wire Distance : ")
+            outer_d = input('\n'+"Input Outer Length of Coil [cm]: ")
+            if float(outer_d) > 0:
+                self.outer_d = float(outer_d)
+                break
+            else:
+                print('\n' + "!!!!Input Error!!!!" + '\n')
+
+        while True:
+            wire_distance = input('\n'+"Input Wire Distance [cm]: ")
             if float(wire_width) > 0:
                 self.wire_distance = float(wire_distance) 
                 break
@@ -58,7 +73,7 @@ class Planarcoil():
                 print('\n' + "!!!!Input Error!!!!")
 
         while True:
-            height = input('\n'+"Input Height : ")
+            height = input('\n'+"Input Height [cm]: ")
             if float(height) > 0:
                 self.height = float(height)
                 break
@@ -84,8 +99,36 @@ class Planarcoil():
             else:
                 print('\n' + "!!!!Input Error!!!!")
 
+    def generate_shape(self):
+        cond_arr_Xpdir = []
+        cond_arr_Xmdir = []
+        cond_arr_Ypdir = []
+        cond_arr_Ymdir = []
+        for n in range(self.turn):
+            # Straight Cond I flows in x+ direction
+            if n == 0 or n == 1:
+                l_xp = self.outer_d - (n+1)*self.wire_width - n*self.wire_distance 
+            else:
+                l_xp = self.outer_d - (2*n)*self.wire_width - (2*n-1)*self.wire_distance
+            cond_temp_xp = StraightCoil(w=self.wire_width, h=self.height ,l=l_xp)
+            # Straight Cond I flows in y- direction
+            l_ym = self.outer_d - (2*n+1)*self.wire_width - (2*n)*self.wire_distance
+            cond_temp_ym = StraightCoil(w=self.wire_width, h=self.height ,l=l_ym)
+            # Straight Cond I flows in x- direction
+            l_xm = self.outer_d - (2*n+1)*self.wire_width - (2*n)*self.wire_distance
+            cond_temp_xm = StraightCoil(w=self.wire_width, h=self.height ,l=l_xm)
+            # Straight Cond I flows in y+ direction
+            l_yp = self.outer_d - (2*n+2)*self.wire_width - (2*n+1)*self.wire_distance
+            cond_temp_yp = StraightCoil(w=self.wire_width, h=self.height ,l=l_yp)
+            
+            cond_arr_Xpdir.append(cond_temp_xp)
+            cond_arr_Xmdir.append(cond_temp_xm)
+            cond_arr_Ypdir.append(cond_temp_ym)
+            cond_arr_Ymdir.append(cond_temp_yp)
+
     def mutual_inductance(self, cond1, cond2):
-        pass
+        
+        pass 
 
     def calc_inductance(self):
         print('\n\n' + "="*20)
@@ -96,3 +139,6 @@ class Planarcoil():
 if __name__ == "__main__":
     # Execute only if run as a script
     ex_planar = Planarcoil()
+    #cond1 = StraightCoil(1,2,3,4)
+    #cond2 = StraightCoil(5,6,7,8)
+    #ex_planar.mutual_inductance(cond1, cond2)
