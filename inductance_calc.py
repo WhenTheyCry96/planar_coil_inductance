@@ -132,7 +132,7 @@ class Planarcoil():
     def mutual_L(self, l_wire, d):
         # l_wire for length and d for distance btw the track centers
         # GMD for Geometric Mean Distance
-        GMD = d/math.exp(1/12*math.pow(d/self.wire_width,2))
+        GMD = d #/(math.exp(1/12*math.pow(d/self.wire_width,2)))
         Q = math.log((l_wire/GMD) + math.pow((1+(math.pow(l_wire/GMD,2))),0.5)) - \
             math.pow((1+(math.pow(GMD/l_wire,2))),0.5) + GMD/l_wire
         result = 2*l_wire*Q
@@ -162,7 +162,8 @@ class Planarcoil():
                 len_m = 2*(j-i)*(self.wire_width+self.wire_distance)
                 dist_btw = self.wire_width + (j-i)*self.wire_distance
                 mutual_temp = (self.mutual_L(l_wire=len_p,d=dist_btw)-self.mutual_L(l_wire=len_m,d=dist_btw))
-                mutual_totL = mutual_totL + mutual_temp
+                # Unit Fix nH to uH
+                mutual_totL = mutual_totL + 0.001*mutual_temp
                 print("Mutual Temp[%d, %d] : %f" %(i,j, mutual_temp))
         print("\n"+"="*40)
         print("Total Plus Mutual Inductance : %f" %(mutual_totL))
@@ -174,19 +175,18 @@ class Planarcoil():
         for i in range(len(arr_cond1)):
             for j in range(len(arr_cond2)):
                 # mutual inductance between opposite I dir. conductors
-                long_l = arr_cond1[i].l
                 short_l = arr_cond2[j].l
                 if arr_cond1[i].l < arr_cond2[j].l:
-                    long_l = arr_cond2[j].l
-                    short_l = arr_cond1[i].l
+                    short_l = arr_cond1[i].l 
                 len_l = abs(i-j)*(self.wire_width+self.wire_distance)+self.wire_width
                 len_r = abs(abs(i-j)-1)*(self.wire_width+self.wire_distance)+self.wire_distance
-                dist_btw = self.outer_d - (i+j-2)*(self.wire_width+self.wire_distance)-self.wire_width
+                dist_btw = self.outer_d - (i+j-2)*(self.wire_width+self.wire_distance) - self.wire_width
                 mutual_temp = 0.5*(self.mutual_L(l_wire=(len_l+short_l),d=dist_btw)
                     +self.mutual_L(l_wire=(len_r+short_l),d=dist_btw)
                     -self.mutual_L(l_wire=len_l,d=dist_btw)
                     -self.mutual_L(l_wire=len_r,d=dist_btw))
-                mutual_totL = mutual_totL + mutual_temp
+                # Unit Fix nH to uH
+                mutual_totL = mutual_totL + 0.001*mutual_temp
                 print("Mutual Temp[%d, %d] : %f" %(i,j, mutual_temp))
         print("\n"+"="*40)
         print("Total Minus Mutual Inductance : %f" %(mutual_totL))
@@ -194,17 +194,23 @@ class Planarcoil():
         return mutual_totL
 
     def calc_inductance(self):
-        print('\n\n' + "="*20)
-        print("Inducatnce calculation")
-        print("="*20 + '\n\n')
+        print('\n\n' + "="*40)
+        print("\tInducatnce calculation")
+        print("="*40 + '\n\n')
         L_tot = 0
         L_tot = L_tot + self.self_inductance_total()
-        L_tot = L_tot + self.mutual_inductance_totalP(self.cond_arr_XPdir)
-        L_tot = L_tot + self.mutual_inductance_totalP(self.cond_arr_XMdir)
-        L_tot = L_tot + self.mutual_inductance_totalP(self.cond_arr_YPdir)
-        L_tot = L_tot + self.mutual_inductance_totalP(self.cond_arr_YMdir)
-        L_tot = L_tot + self.mutual_inductance_totalM(self.cond_arr_XPdir, self.cond_arr_XMdir)
-        L_tot = L_tot + self.mutual_inductance_totalM(self.cond_arr_YPdir, self.cond_arr_YMdir)
+        print("\n\tPLUS Mutual Inductance of X+direction")
+        L_tot = L_tot + 2*self.mutual_inductance_totalP(self.cond_arr_XPdir)
+        print("\n\tPLUS Mutual Inductance of X-direction")
+        L_tot = L_tot + 2*self.mutual_inductance_totalP(self.cond_arr_XMdir)
+        print("\n\tPLUS Mutual Inductance of Y+direction")
+        L_tot = L_tot + 2*self.mutual_inductance_totalP(self.cond_arr_YPdir)
+        print("\n\tPLUS Mutual Inductance of Y-direction")
+        L_tot = L_tot + 2*self.mutual_inductance_totalP(self.cond_arr_YMdir)
+        print("\n\tMINUS Mutual Inductance of X direction")
+        L_tot = L_tot - 2*self.mutual_inductance_totalM(self.cond_arr_XPdir, self.cond_arr_XMdir)
+        print("\n\tMINUS Mutual Inductance of Y direction")
+        L_tot = L_tot - 2*self.mutual_inductance_totalM(self.cond_arr_YPdir, self.cond_arr_YMdir)
         return L_tot
 
 
