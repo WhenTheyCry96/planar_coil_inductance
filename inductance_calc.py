@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*- 
 import math
 
+def isNumber(s):
+  try:
+    float(s)
+    return True
+  except ValueError:
+    return False
 
 class StraightCoil():
     def __init__(self, w, h, l):
@@ -47,7 +53,7 @@ class Planarcoil():
 
         while True:
             turn = input('\n'+"Input Coil Turns : ")
-            if turn.isnumeric() and int(turn) > 0:
+            if isNumber(turn) and int(turn) > 0:
                 self.turn = int(turn)
                 break
             else:
@@ -55,12 +61,14 @@ class Planarcoil():
 
         while True:
             wire_width = input('\n'+"Input Wire Width [cm]: ")
-            if float(wire_width) > 0:
-                self.wire_width = float(wire_width)
-                break
+            if isNumber(wire_width) is True:
+                if float(wire_width) > 0:
+                    self.wire_width = float(wire_width)
+                    break
+                else:
+                    print('\n' + "!!!!Input Error!!!! - MINUS VALUE" + '\n')
             else:
                 print('\n' + "!!!!Input Error!!!!" + '\n')
-
         while True:
             outer_d = input('\n'+"Input Outer Length of Coil [cm]: ")
             if float(outer_d) > 0:
@@ -105,29 +113,42 @@ class Planarcoil():
                 print('\n' + "!!!!Input Error!!!!")
 
     def generate_shape(self):
-        for n in range(self.turn):
-            # Straight Cond I flows in x+ direction
-            if n == 0 or n == 1:
-                l_xp = self.outer_d - (n+1)*self.wire_width - n*self.wire_distance 
+        for n in range(self.turn+1):
+            if n != self.turn:
+                # Straight Cond I flows in x+ direction
+                if n == 0 or n == 1:
+                    l_xp = self.outer_d - (n+1)*self.wire_width - n*self.wire_distance 
+                else:
+                    l_xp = self.outer_d - (2*n)*self.wire_width - (2*n-1)*self.wire_distance
+                cond_temp_xp = StraightCoil(w=self.wire_width, h=self.height ,l=l_xp)
+                # Straight Cond I flows in y- direction
+                l_ym = self.outer_d - (2*n+1)*self.wire_width - (2*n)*self.wire_distance
+                cond_temp_ym = StraightCoil(w=self.wire_width, h=self.height ,l=l_ym)
+                # Straight Cond I flows in x- direction
+                l_xm = self.outer_d - (2*n+1)*self.wire_width - (2*n)*self.wire_distance
+                cond_temp_xm = StraightCoil(w=self.wire_width, h=self.height ,l=l_xm)
+                # Straight Cond I flows in y+ direction
+                l_yp = self.outer_d - (2*n+2)*self.wire_width - (2*n+1)*self.wire_distance
+                cond_temp_yp = StraightCoil(w=self.wire_width, h=self.height ,l=l_yp)
+                
+                self.cond_arr_XPdir.append(cond_temp_xp)
+                self.cond_arr_XMdir.append(cond_temp_xm)
+                self.cond_arr_YMdir.append(cond_temp_ym)
+                self.cond_arr_YPdir.append(cond_temp_yp)
             else:
-                l_xp = self.outer_d - (2*n)*self.wire_width - (2*n-1)*self.wire_distance
-            cond_temp_xp = StraightCoil(w=self.wire_width, h=self.height ,l=l_xp)
-            # Straight Cond I flows in y- direction
-            l_ym = self.outer_d - (2*n+1)*self.wire_width - (2*n)*self.wire_distance
-            cond_temp_ym = StraightCoil(w=self.wire_width, h=self.height ,l=l_ym)
-            # Straight Cond I flows in x- direction
-            l_xm = self.outer_d - (2*n+1)*self.wire_width - (2*n)*self.wire_distance
-            cond_temp_xm = StraightCoil(w=self.wire_width, h=self.height ,l=l_xm)
-            # Straight Cond I flows in y+ direction
-            l_yp = self.outer_d - (2*n+2)*self.wire_width - (2*n+1)*self.wire_distance
-            cond_temp_yp = StraightCoil(w=self.wire_width, h=self.height ,l=l_yp)
-            
-            self.cond_arr_XPdir.append(cond_temp_xp)
-            self.cond_arr_XMdir.append(cond_temp_xm)
-            self.cond_arr_YMdir.append(cond_temp_ym)
-            self.cond_arr_YPdir.append(cond_temp_yp)
-        #FIXME
-        #Add the last turn of the rest conductor
+                #Add the last turn of the rest conductor
+                if self.num_coil % 4 == 1:
+                    # phase 0
+                    self.cond_arr_XPdir.append(cond_temp_xp)
+                elif self.num_coil % 4 == 2:
+                    # phase 270
+                    self.cond_arr_XPdir.append(cond_temp_xp)
+                    self.cond_arr_YMdir.append(cond_temp_ym)
+                elif self.num_coil % 4 == 3:
+                    # phase 180
+                    self.cond_arr_XPdir.append(cond_temp_xp)
+                    self.cond_arr_XMdir.append(cond_temp_xm)
+                    self.cond_arr_YMdir.append(cond_temp_ym)
 
     def mutual_L(self, l_wire, d):
         # l_wire for length and d for distance btw the track centers
@@ -164,7 +185,8 @@ class Planarcoil():
                 mutual_temp = (self.mutual_L(l_wire=len_p,d=dist_btw)-self.mutual_L(l_wire=len_m,d=dist_btw))
                 # Unit Fix nH to uH
                 mutual_totL = mutual_totL + 0.001*mutual_temp
-                print("Mutual Temp[%d, %d] : %f" %(i,j, mutual_temp))
+                #print("Mutual Temp[%d, %d] : %f" %(i,j, mutual_temp))
+        mutual_totL = 2 * mutual_totL 
         print("\n"+"="*40)
         print("Total Plus Mutual Inductance : %f" %(mutual_totL))
         print("="*40 +"\n")
@@ -187,7 +209,8 @@ class Planarcoil():
                     -self.mutual_L(l_wire=len_r,d=dist_btw))
                 # Unit Fix nH to uH
                 mutual_totL = mutual_totL + 0.001*mutual_temp
-                print("Mutual Temp[%d, %d] : %f" %(i,j, mutual_temp))
+                #print("Mutual Temp[%d, %d] : %f" %(i,j, mutual_temp))
+        mutual_totL = 2 * mutual_totL
         print("\n"+"="*40)
         print("Total Minus Mutual Inductance : %f" %(mutual_totL))
         print("="*40 +"\n")
@@ -199,26 +222,22 @@ class Planarcoil():
         print("="*40 + '\n\n')
         L_tot = 0
         L_tot = L_tot + self.self_inductance_total()
-        print("\n\tPLUS Mutual Inductance of X+direction")
-        L_tot = L_tot + 2*self.mutual_inductance_totalP(self.cond_arr_XPdir)
-        print("\n\tPLUS Mutual Inductance of X-direction")
-        L_tot = L_tot + 2*self.mutual_inductance_totalP(self.cond_arr_XMdir)
-        print("\n\tPLUS Mutual Inductance of Y+direction")
-        L_tot = L_tot + 2*self.mutual_inductance_totalP(self.cond_arr_YPdir)
-        print("\n\tPLUS Mutual Inductance of Y-direction")
-        L_tot = L_tot + 2*self.mutual_inductance_totalP(self.cond_arr_YMdir)
-        print("\n\tMINUS Mutual Inductance of X direction")
-        L_tot = L_tot - 2*self.mutual_inductance_totalM(self.cond_arr_XPdir, self.cond_arr_XMdir)
-        print("\n\tMINUS Mutual Inductance of Y direction")
-        L_tot = L_tot - 2*self.mutual_inductance_totalM(self.cond_arr_YPdir, self.cond_arr_YMdir)
+        print("\nPLUS Mutual Inductance of X+direction")
+        L_tot = L_tot + self.mutual_inductance_totalP(self.cond_arr_XPdir)
+        print("\nPLUS Mutual Inductance of X-direction")
+        L_tot = L_tot + self.mutual_inductance_totalP(self.cond_arr_XMdir)
+        print("\nPLUS Mutual Inductance of Y+direction")
+        L_tot = L_tot + self.mutual_inductance_totalP(self.cond_arr_YPdir)
+        print("\nPLUS Mutual Inductance of Y-direction")
+        L_tot = L_tot + self.mutual_inductance_totalP(self.cond_arr_YMdir)
+        print("\nMINUS Mutual Inductance of X direction")
+        L_tot = L_tot - self.mutual_inductance_totalM(self.cond_arr_XPdir, self.cond_arr_XMdir)
+        print("\nMINUS Mutual Inductance of Y direction")
+        L_tot = L_tot - self.mutual_inductance_totalM(self.cond_arr_YPdir, self.cond_arr_YMdir)
         return L_tot
 
 
 if __name__ == "__main__":
     # Execute only if run as a script
     ex_planar = Planarcoil()
-    #print(ex_planar.self_inductance_total())
-    print(ex_planar.calc_inductance())
-    #cond1 = StraightCoil(1,2,3,4)
-    #cond2 = StraightCoil(5,6,7,8)
-    #ex_planar.mutual_inductance(cond1, cond2)
+    print("%f [uH]" %(ex_planar.calc_inductance()))
