@@ -60,6 +60,14 @@ class Planarcoil():
                 print('\n' + "!!!!Input Error!!!!" + '\n')
 
         while True:
+            outer_d = input('\n'+"Input Outer Length of Coil [cm]: ")
+            if float(outer_d) > 0:
+                self.outer_d = float(outer_d)
+                break
+            else:
+                print('\n' + "!!!!Input Error!!!!" + '\n')
+                
+        while True:
             wire_width = input('\n'+"Input Wire Width [cm]: ")
             if isNumber(wire_width) is True:
                 if float(wire_width) > 0:
@@ -67,13 +75,6 @@ class Planarcoil():
                     break
                 else:
                     print('\n' + "!!!!Input Error!!!! - MINUS VALUE" + '\n')
-            else:
-                print('\n' + "!!!!Input Error!!!!" + '\n')
-        while True:
-            outer_d = input('\n'+"Input Outer Length of Coil [cm]: ")
-            if float(outer_d) > 0:
-                self.outer_d = float(outer_d)
-                break
             else:
                 print('\n' + "!!!!Input Error!!!!" + '\n')
 
@@ -179,10 +180,14 @@ class Planarcoil():
         for i in range(len(arr_cond) - 1):
             for j in range(i+1, len(arr_cond)):
                 # mutual inductance between conductors
-                len_p = arr_cond[j].l + 2*(self.wire_width+self.wire_distance)
-                len_m = 2*(j-i)*(self.wire_width+self.wire_distance)
+                len_q = abs(j-i)*(self.wire_width+self.wire_distance)
+                len_m = arr_cond[j].l
+                len_p = arr_cond[i].l - len_m - len_q
                 dist_btw = self.wire_width + (j-i)*self.wire_distance
-                mutual_temp = (self.mutual_L(l_wire=len_p,d=dist_btw)-self.mutual_L(l_wire=len_m,d=dist_btw))
+                mutual_temp = 0.5*(self.mutual_L(l_wire=len_p+len_m,d=dist_btw)
+                +self.mutual_L(l_wire=len_q+len_m,d=dist_btw)
+                -self.mutual_L(l_wire=len_p,d=dist_btw)
+                -self.mutual_L(l_wire=len_q,d=dist_btw))
                 # Unit Fix nH to uH
                 mutual_totL = mutual_totL + 0.001*mutual_temp
                 #print("Mutual Temp[%d, %d] : %f" %(i,j, mutual_temp))
@@ -201,7 +206,7 @@ class Planarcoil():
                 if arr_cond1[i].l < arr_cond2[j].l:
                     short_l = arr_cond1[i].l 
                 len_l = abs(i-j)*(self.wire_width+self.wire_distance)+self.wire_width
-                len_r = abs(abs(i-j)-1)*(self.wire_width+self.wire_distance)+self.wire_distance
+                len_r = abs(abs(i-j)+1)*(self.wire_width+self.wire_distance)+self.wire_distance
                 dist_btw = self.outer_d - (i+j-2)*(self.wire_width+self.wire_distance) - self.wire_width
                 mutual_temp = 0.5*(self.mutual_L(l_wire=(len_l+short_l),d=dist_btw)
                     +self.mutual_L(l_wire=(len_r+short_l),d=dist_btw)
