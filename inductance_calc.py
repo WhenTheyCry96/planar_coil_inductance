@@ -80,7 +80,7 @@ class Planarcoil():
 
         while True:
             wire_distance = input('\n'+"Input Wire Distance [cm]: ")
-            if float(wire_width) > 0:
+            if float(wire_distance) > 0:
                 self.wire_distance = float(wire_distance) 
                 break
             else:
