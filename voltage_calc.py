@@ -34,6 +34,7 @@ def voltage_calculator(p_coil):
     field = 0
     voltage = 0
     print("%d %f %f %f" %(iter_num, outer_d, coil_w, coil_p))
+
     while True:
         magnetic_field = input('\n'+"Input dB/dt field [T/sec]: ")
         if isNumber(magnetic_field) and float(magnetic_field) > 0:
@@ -41,6 +42,7 @@ def voltage_calculator(p_coil):
             break
         else:
             print('\n' + "!!!!Input Error!!!!" + '\n')
+            
     for i in range(iter_num):
         area = math.pow((outer_d - (coil_w + coil_p)*i),2)
         voltage = voltage + area * field
