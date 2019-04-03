@@ -17,6 +17,7 @@ planarVoltData = []
 kalman_hallData = []
 kalman_currentData = []
 kalman_planarVoltData = []
+calculated_mag = []
 
 def fileLoad():
     relPath = "./data"
@@ -91,6 +92,19 @@ def inducedV(turn, outerL, inductance, dBdt):
         result = result + A*L*inc_B
     return result
 
+def magCalc(tData, vData, turn, outerL, inductance):
+    magRelative = 0 # Relative magnetic field intensity
+    for idx, val in enumerate(vData):
+        if idx == 0:
+            calculated_mag.append(0)
+        else:
+            #indV_diff = val - vData[idx-1]
+            t_diff = tData[idx] - tData[idx-1]
+            #FIXME
+            # + or - depending on the raw data sign
+            magRelative = magRelative - val*t_diff
+            calculated_mag.append(magRelative)
+
 
 class KalmanFilter():
     # REF
@@ -145,7 +159,7 @@ if __name__ == "__main__":
     kalman.meanFix(kalman_planarVoltData)
     #FIXME
     turn = 33
-    outerL = 0.035
+    outerL = 0.034
     inductance = 56e-6
     ramping = input("Ramping Rate of Current : [A/sec]\n")
     ramping = float(ramping)
@@ -158,3 +172,10 @@ if __name__ == "__main__":
     plotScatter(timeData, hallData, "time [Sec]", "Hall Voltage [V]")
     plotScatter(timeData, planarVoltData, "time [Sec]", "Planar Coil [V]")
     plotdiffScales(timeData, kalman_planarVoltData, hallData,'time [sec]', "planar sensor [V]", "Hall data [V]")
+    magCalc(tData=timeData, vData=kalman_planarVoltData, turn=turn, outerL=outerL, inductance=inductance)
+    plotdiffScales(timeData, calculated_mag, hallData,'time [sec]', "calculated B [relative]", "Hall data [V]")    
+    calculated_mag.clear()
+    magCalc(tData=timeData, vData=planarVoltData, turn=turn, outerL=outerL, inductance=inductance)
+    plotdiffScales(timeData, calculated_mag, hallData,'time [sec]', "calculated B from Raw Data[relative]", "Hall data [V]")
+        
+    
