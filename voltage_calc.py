@@ -31,6 +31,7 @@ def voltage_calculator(p_coil):
     outer_d = p_coil.outer_d
     coil_w = p_coil.wire_width
     coil_p = p_coil.wire_distance
+    _coil_ind = p_coil.calc_inductance()
     field = 0
     voltage = 0
     print("%d %f %f %f" %(iter_num, outer_d, coil_w, coil_p))
@@ -46,14 +47,16 @@ def voltage_calculator(p_coil):
     for i in range(iter_num):
         area = math.pow((outer_d - (coil_w + coil_p)*i),2)
         voltage = voltage + area * field
+        print("area : %f / voltage : %f " %(area, voltage))
     # unit MKS [cm] -> [m]
     voltage = voltage / 10000
-    print("Total voltage induced : %f [V]" %(voltage))
+    voltage = voltage 
+    print("Total voltage induced : %.8E [V]" %(voltage))
     return voltage
 
 if __name__ == "__main__":
     # Execute only if run as a script
     ex_planar = Planarcoil()
     print("%f [uH]" %(ex_planar.calc_inductance()))
-    flux_calculator(ex_planar)
+    #flux_calculator(ex_planar)
     voltage_calculator(ex_planar)
